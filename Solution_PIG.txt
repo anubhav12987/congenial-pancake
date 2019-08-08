@@ -1,0 +1,45 @@
+A = LOAD 'hdfs:/pig/airports_mod.dat' USING PigStorage(',') AS (AirportID:int , name:chararray , city:chararray , country:chararray ,
+IATACode:chararray , ICAOCode:chararray , latitude:double , longitude:double , altitude:int , timezone:float , DST:chararray , TZ:chararray);
+
+B = LOAD 'hdfs:/pig/Final_airlines' USING PigStorage(',') AS (AirlineID:int , Name:chararray , Alias:chararray , IATA:chararray , ICAO:chararray ,
+Callsign:chararray , Country:chararray , Active:chararray);
+
+C = LOAD 'hdfs:/pig/routes.dat' USING PigStorage(',') AS (Airline:chararray , AirlineID:int , SourceAirport:chararray , SourceAirportID:int ,
+DestinationAirport:chararray , DestinationAirportID:int , codeshare:chararray , stops:int , Equipment:chararray);
+
+1) Find list of Airports operating in the Country India 
+D = FILTER A by country=='India';
+E = FOREACH D GENERATE AirportID, name,country;
+DUMP E;
+
+2) Find the list of Airlines having zero stops 
+D = FOREACH C GENERATE AirlineID,stops;
+E = FILTER D by stops==0;
+F = DISTINCT E;
+G = FOREACH B GENERATE AirlineID , Name;
+H = JOIN F by AirlineID , G by AirlineID;
+I = FOREACH H GENERATE F::AirlineID, G::Name;
+DUMP I;
+
+3) List of Airlines operating with code share 
+D = FOREACH C GENERATE AirlineID,codeshare;
+E = FILTER D by codeshare=='Y';
+F = DISTINCT E;
+G = FOREACH B GENERATE AirlineID , Name;
+H = JOIN F by AirlineID , G by AirlineID;
+I = FOREACH H GENERATE F::AirlineID, G::Name , F::codeshare;
+DUMP I;
+
+4) Which country (or) territory  having highest Airports
+D = FOREACH A GENERATE AirportID,country;
+E = GROUP D BY country;
+F = FOREACH E GENERATE group,COUNT(D) as count1;
+G = ORDER F BY count1 DESC;
+H = LIMIT G 1;
+DUMP H;
+
+5) Find the list of Active Airlines  in United state 
+D = FOREACH B GENERATE AirlineID,Name,Active,Country;
+E = FILTER D by Active=='Y' AND Country=='United States';
+F = DISTINCT E;
+DUMP F;
